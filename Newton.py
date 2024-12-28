@@ -10,11 +10,14 @@ import csv
 
 
 # Useful constants.
-G = 6.67430e-11
-avg_earth_rad = 6371e3
+G_SI = 6.67430e-11
+avg_earth_rad = 6.37814e6
 solar_mass = 1.988416e30
 M_sun = "(M\u2609)"
 R_earth = "(R\u2295)"
+
+# _SI will denote that a quantity is in SI units, _MSRE will denote if a 
+# quantity is in Solar Mass-Earth Radius units.
 
 
 
@@ -54,11 +57,10 @@ def my_test_newton():
     WDs. Performs a unit conversion of loggs to earth radii and plots these 
     M(R) data points.
     
-    PART C: Starts with a guess for the parameters dH and oM (omega_M) and
-    performs a nonlinear fit by solving a nonlinear root finding problem as 
-    defined in Eq. (3.1.22). This allows us to find the best fit values for dH
-    and oM. Additionally, a plot of this nonlinear best fit line with the found
-    parameters is presented.
+    PART C: Filters out WD datapoints with low mass. Performs a linear fit to
+    determine q and n*. Solves the Lane-Emden equation with newly found n* to
+    find ξn and θ'(ξn). Uses all these parameters to find K*. Finally computes
+    rho_c and plots it against low mass WD masses.
     
     """    
     
@@ -78,7 +80,7 @@ def my_test_newton():
     
     # Convert to loggs to radii in units of average earth radius.
     gs = np.power(10, loggs) / 100
-    stellar_radii = np.sqrt(G * masses * solar_mass / gs) / avg_earth_rad
+    stellar_radii = np.sqrt(G_SI * masses * solar_mass / gs) / avg_earth_rad
     
     
     # Plotting
@@ -164,18 +166,34 @@ def my_test_newton():
     ξn = sol.t[ξn_idx]
     dθ_at_ξn = sol.y[1, ξn_idx]
     
+    plt.plot(sol.t, sol.y[0], color = "forestgreen")
+    plt.title(r'Lane-Emden $\theta (\xi)$ solution for n = ' + str(n))
+    plt.xlabel(r'$\xi$')
+    plt.ylabel(r'$\theta (\xi)$')
+    plt.scatter(ξn, 0, color='darkorange', label=r'$\xi_n$')
+    plt.text(ξn-0.3, 0.1, '({:.2f}, {:.2f})'.format(ξn, 0))
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+    
     
     #--------------------
     # Determining K*
-    #--------------------   
+    #-------------------- 
+    
+    # Convert G to M☉ and R🜨 units
+    G_MSRE = G_SI * (solar_mass) / (avg_earth_rad**3)
     
     # Full M(R) equation
     def M_R_eq_full(R, K):
-        return -4*pi * ((4*pi*G) / (n+1)*K)**(n / (1-n)) * ξn**((n+1) / (n-1)) * dθ_at_ξn * R**((3-n) / (1-n))
+        return -4*pi * ((4*pi*G_MSRE) / ((n+1)*K))**(n / (1-n)) * ξn**((n+1) / (n-1)) * dθ_at_ξn * R**((3-n) / (1-n))
     
     # Solution of K* from fit
     K_arr, pcov = curve_fit(M_R_eq_full, low_mass_radii, low_masses)
-    K = K_arr[0]
+    K_MSRE = K_arr[0]
+
+    # Convert K* to SI units
+    K_SI = K_MSRE * (avg_earth_rad**4) / (solar_mass**(2/3))
     
     
     #------------------------
@@ -184,7 +202,7 @@ def my_test_newton():
     
     # Plotting full fit-curve using n*, K*, ξn, and θ'(ξn)
     R_plt_points = np.linspace(1, 2.7, 100)
-    M_plt_points = M_R_eq_full(R_plt_points, K)
+    M_plt_points = M_R_eq_full(R_plt_points, K_MSRE)
     
     plt.plot( R_plt_points, M_plt_points, lw = 2, color = "darkred", label = "Fit")
     plt.scatter(stellar_radii, masses, lw=0.1, alpha=0.4, color = "teal", label = "True Data")
@@ -197,7 +215,7 @@ def my_test_newton():
     
     
     fit_params_names = ["n*", "K*", "ξ_n", "θ'(ξ_n)"]
-    fit_params_vals = np.round(np.array([n, K, ξn, dθ_at_ξn]), 3)
+    fit_params_vals = np.round(np.array([n, K_SI, ξn, dθ_at_ξn]),3)
     
     fig, ax = plt.subplots(figsize=(6, 4))
 
@@ -213,19 +231,28 @@ def my_test_newton():
     
     
     #----------------------------------
-    # Determining Central Density (Not done)
+    # Determining Central Density 
     #----------------------------------    
     
-    rho_c = ((low_mass_radii / ξn)**2 * ((4*pi*G) / (n+1)*K)) ** ((1-n) / n)
+    # Calculating rho_c
+    rho_c_MSRE = -(low_masses * ξn) / (4*pi*(low_mass_radii**3)*dθ_at_ξn)
     
-    #rho_c = ((-low_masses/(4*pi*dθ_at_ξn**2)) * ((4*pi*G) / (n+1)*K)**1.5) **(2*n / (3-n))
+    # Different formulations for rho_c
+    #rho_c = ((low_mass_radii / ξn)**2 * ((4*pi*Gc) / ((n+1)*K))) ** ((1-n) / n)
+    #rho_c = ((-low_masses/(4*pi*dθ_at_ξn**2)) * ((4*pi*Gc) / (n+1)*K)**1.5) **(2*n / (3-n))
     
-    rho_c *= (solar_mass / avg_earth_rad**3)
-    plt.scatter(rho_c, low_masses)
+    rho_c_SI = rho_c_MSRE * (solar_mass / avg_earth_rad**3)
+    
+    # Plotting rho_c vs m
+    plt.scatter(low_masses, rho_c_MSRE, lw=0.1, alpha=0.7, color = "palevioletred")
+    plt.title(r'$\rho_c$ vs M data points for low mass WDs')
+    plt.xlabel("Mass " + M_sun)
+    plt.ylabel(r'$\rho_c \quad (\mathrm{M}_\odot) \, (\mathrm{R}_\oplus)^{-3}$')
+    plt.grid(True)
     plt.show()
     print()    
 
-    print('Newton--Part C Done. \n\n\n')    
+    print('Newton--Part C Done. \n\n\n')
     
     
     
