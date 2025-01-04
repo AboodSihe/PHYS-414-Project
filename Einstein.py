@@ -9,8 +9,10 @@ from scipy.optimize import curve_fit
 
 
 # Useful constants
-r_scale = 1.477 # in km
+r_scale_km = 1.477 # in km
+r_scale_m = 1477 # in m
 K_NS = 100
+solar_mass = 1.988416e30
 
 
 
@@ -78,12 +80,16 @@ def my_test_einstein():
     Main function for Einstein.
 
     PARTS A and B: Solves the TOV equations for various ρ_c and plots the
-    resultant M(ρ_c) vs R(ρ_c) and Δ(ρ_c) vs R(ρ_c) curves.
+    resultant M(ρc) vs R(ρc) and Δ(ρc) vs R(ρc) curves.
 
     """
+
+
+
     #=========================================================================
     # PARTS A and B
     #=========================================================================
+    print('Einstein--Parts A and B Start: \n')
 
     # NSs have radii 10-20kms. 15 * r_scale means we can see NSs with radii
     # from 0 ~ 30 kms.
@@ -92,7 +98,8 @@ def my_test_einstein():
 
     # In rescaled units, ρ ~ 10^-3, so we check values between 0.9*10^-3 to
     # 9*10^-3
-    ρ_c_vals = np.linspace(9e-4, 9e-3, 101)
+    num_points = 101
+    ρ_c_vals = np.linspace(9e-4, 9e-3, num_points)
 
     # Initialize end of integration value arrays.
     R_pc_vals = np.zeros(len(ρ_c_vals))
@@ -124,24 +131,24 @@ def my_test_einstein():
         Δ_pc_vals[i] = (B_pc - M_pc) / M_pc
 
     # Scale radii
-    R_pc_vals *= r_scale
+    R_pc_vals *= r_scale_km
 
 
     # Make cubic polynomial fit of datapoints
     R_fit = np.linspace(min(R_pc_vals), max(R_pc_vals), 150)
 
-    def quad_fit(x, a, b, c, d):
+    def cubic_fit(x, a, b, c, d):
         return a*x**3 + b*x**2 + c*x + d
 
     # Plotting MR datapoints and fit curve
-    coeffsM, cov = curve_fit(quad_fit, R_pc_vals, M_pc_vals)
+    coeffsM, cov = curve_fit(cubic_fit, R_pc_vals, M_pc_vals)
     aM, bM, cM, dM = coeffsM
 
-    M_fit = quad_fit(R_fit, aM, bM, cM, dM)
+    M_fit = cubic_fit(R_fit, aM, bM, cM, dM)
 
-    plt.scatter(R_pc_vals, M_pc_vals, alpha=0.5, color = "orangered", label = "Datapoints")
+    plt.scatter(R_pc_vals, M_pc_vals, alpha=0.4, color = "orangered", label = "Datapoints")
     plt.plot(R_fit, M_fit, color = "orangered", label = "Fit Curve")
-    plt.title(r'$M(\rho_c)$ vs $R(\rho_c)$ plot for NSs')
+    plt.title(rf'$M(\rho_c)$ vs $R(\rho_c)$ plot for NSs (N = {num_points})')
     plt.xlabel(r'$R(\rho_c)$ (km)')
     plt.ylabel(r'$M(\rho_c) \quad (M \odot)$')
     plt.text(14, 1.3, r'Low $\rho_c$', bbox=dict(facecolor="white"))
@@ -151,24 +158,110 @@ def my_test_einstein():
 
 
     # Plotting ΔR datapoints and fit curve (B here for baryonic mass)
-    coeffsB, cov = curve_fit(quad_fit, R_pc_vals, Δ_pc_vals)
+    coeffsB, cov = curve_fit(cubic_fit, R_pc_vals, Δ_pc_vals)
     aB, bB, cB, dB = coeffsB
 
-    B_fit = quad_fit(R_fit, aB, bB, cB, dB)
+    B_fit = cubic_fit(R_fit, aB, bB, cB, dB)
 
-    plt.scatter(R_pc_vals, Δ_pc_vals, alpha=0.5, color = "dodgerblue", label = "Datapoints")
+    plt.scatter(R_pc_vals, Δ_pc_vals, alpha=0.4, color = "dodgerblue", label = "Datapoints")
     plt.plot(R_fit, B_fit, color = "dodgerblue", label = "Fit Curve")
-    plt.title(r'$\Delta(\rho_c)$ vs $R(\rho_c)$ plot for NSs')
+    plt.title(rf'$\Delta(\rho_c)$ vs $R(\rho_c)$ plot for NSs (N = {num_points})')
     plt.xlabel(r'$R(\rho_c)$ (km)')
     plt.ylabel(r'$\Delta(\rho_c)$')
     plt.legend()
     plt.show()
+    print()
+
+    print('Einstein--Parts A and B Done. \n\n\n')
 
 
 
     #=========================================================================
     # PART C
     #=========================================================================
+    print('Einstein--Part C Start: \n')
+
+    #----------------------------------
+    # Computing M(ρ_c) vs ρ_c curve
+    #----------------------------------
+
+    # Scale ρ_c values by 1000 just to avoid errors with curve fitting
+    ρ_c_vals_scaled = ρ_c_vals * 1e3
+
+    # Perform a quintic polynomial curve fit
+    ρ_c_fit = np.linspace(min(ρ_c_vals_scaled), max(ρ_c_vals_scaled), 300)
+
+    def quintic_fit(x, a, b, c, d, e, f):
+        return a*x**5 + b*x**4 + c*x**3 + d*x**2 + e*x + f
+
+    coeffs, cov = curve_fit(quintic_fit, ρ_c_vals_scaled, M_pc_vals)
+    a, b, c, d, e, f = coeffs
+
+    M_fit = quintic_fit(ρ_c_fit, a, b, c, d, e, f)
+
+    # Rescale ρ_c values and fit to be in units kg/m^3 as instructed
+    ρ_c_vals_SI = ρ_c_vals_scaled * (1e-3) * solar_mass / ((r_scale_m)**3)
+    ρ_c_fit_SI = ρ_c_fit * (1e-3) * solar_mass / ((r_scale_m)**3)
+
+
+    #-----------------------------------------
+    # Analyzing Stability through dM_dρ_c
+    #-----------------------------------------
+
+    # Derivative of quintic polynomial fit
+    def derv_quintic_fit(x, a, b, c, d, e):
+        return 5*a*x**4 + 4*b*x**3 + 3*c*x**2 + 2*d*x + e
+
+    # Compute dM/dρc
+    dM_dρ_c_fit = derv_quintic_fit(ρ_c_fit, a, b, c, d, e)
+
+    # Locate point where derivative is 0, i.e maximal M
+    zero_crossing_idx = np.where((dM_dρ_c_fit[:-1] > 0) & (dM_dρ_c_fit[1:] < 0))[0]
+    max_M = M_fit[zero_crossing_idx]
+    max_M_ρ_c_SI = ρ_c_fit_SI[zero_crossing_idx]
+
+    # Seperate stable and unstable regimes
+    M_fit_stable = M_fit[:int(zero_crossing_idx)]
+    ρ_c_fit_SI_stable = ρ_c_fit_SI[:int(zero_crossing_idx)]
+    M_fit_unstable = M_fit[int(zero_crossing_idx):]
+    ρ_c_fit_SI_unstable = ρ_c_fit_SI[int(zero_crossing_idx):]
+
+
+    # Plot M vs ρc datapoints and stable and unstable fit curves, report maximal Mass
+    plt.scatter(ρ_c_vals_SI, M_pc_vals, alpha = 0.3, color = "darkorchid", label = "Datapoints")
+    plt.scatter(max_M_ρ_c_SI, max_M, marker= "x", lw=2, label = "Maximal M", color = "gold", zorder = 3)
+    plt.plot(ρ_c_fit_SI_stable, M_fit_stable, color = "darkorchid", label = "Stable region")
+    plt.plot(ρ_c_fit_SI_unstable, M_fit_unstable, color = "deeppink", label = "Unstable region")
+    plt.title(rf'$M(\rho_c)$ vs $\rho_c$ plot for NSs (N = {num_points})')
+    plt.xlabel(r'$\rho_c$ $\left(\frac{kg}{m^3}\right)$')
+    plt.ylabel(r'$M(\rho_c) \quad (M \odot)$')
+    plt.text(max_M_ρ_c_SI-5e17, max_M - 0.13,
+    rf'$(\rho_c, M_{{max}}):$ ({float(max_M_ρ_c_SI):.2e}, {float(max_M):.3f})',
+    bbox=dict(facecolor="white"), fontsize = 10)
+    plt.legend()
+    plt.show()
+
+    # Plot dM/dρc
+    plt.plot(ρ_c_fit_SI, dM_dρ_c_fit, color = "chocolate")
+    plt.scatter(ρ_c_fit_SI[zero_crossing_idx], 0,marker= "x", color = "gold", zorder=3)
+    plt.title(rf'$\frac{{dM}}{{d\rho_c}}$ vs $\rho_c$ plot for NSs (N = {num_points})')
+    plt.xlabel(r'$\rho_c$ $\left(\frac{kg}{m^3}\right)$')
+    plt.ylabel(r'$dM/d\rho_c$')
+    plt.grid(True)
+    plt.show()
+    print()
+
+    print('Einstein--Part C. \n\n\n')
+
+
+
+    #=========================================================================
+    # PART D
+    #=========================================================================
+
+
+
+
     return
 
 my_test_einstein()
