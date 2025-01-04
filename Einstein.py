@@ -18,9 +18,9 @@ solar_mass = 1.988416e30
 
 
 
-def TOV_eqs(r, mvpb_arr):
+def TOV_eqs(r, mvpb_arr, K):
     # TOVEQS Function for solving the Tolman-Oppenheimer-Volkoff (TOV) ODEs.
-    # This function sets the ewquations up like an ivp to be solved by SciPy's
+    # This function sets the equations up like an ivp to be solved by SciPy's
     # solve_ivp(). It takes care of the edge cases where r = 0 or where p goes
     # below 0 during the integration.
 
@@ -48,19 +48,19 @@ def TOV_eqs(r, mvpb_arr):
             p = 0
 
         # Compute ρ
-        ρ = np.sqrt(p / K_NS)
+        ρ = np.sqrt(p / K)
 
         # Define ODEs
         dmdr = 4*pi*ρ * r**2
         dvdr = 2 * (m + 4*pi*p*r**3) / (r * (r - 2*m))
         dpdr = (-(m + 4*pi*p*r**3) / (r * (r - 2*m))) * (ρ + p)
-        dbdr = dmdr / np.sqrt(1 - (2*m / r))
+        dbdr = dmdr / np.sqrt(np.abs(1 - (2*m / r)))
 
     return np.array([dmdr, dvdr, dpdr, dbdr])
 
 
 
-def p_reaches_0(r, mvpb_arr):
+def p_reaches_0(r, mvpb_arr, K):
     # PREACHES0 This function and the following lines of code act like a
     # signal to solve_ivp() to stop integration when p reaches 0. At that point,
     # we'd have reached the maximal radius of the NS.
@@ -82,6 +82,12 @@ def my_test_einstein():
     PARTS A and B: Solves the TOV equations for various ρ_c and plots the
     resultant M(ρc) vs R(ρc) and Δ(ρc) vs R(ρc) curves.
 
+    PART C: Plots M vs ρc and analyzes its derivative to determine the maximal
+    stable mass for K = 100.
+
+    PART D: Essentially repeats the relevant procedures from the previous
+    parts to plot the maximal stable mass for differing values of K.
+
     """
 
 
@@ -89,7 +95,7 @@ def my_test_einstein():
     #=========================================================================
     # PARTS A and B
     #=========================================================================
-    print('Einstein--Parts A and B Start: \n')
+    print("Einstein--Parts A and B Start: \n")
 
     # NSs have radii 10-20kms. 15 * r_scale means we can see NSs with radii
     # from 0 ~ 30 kms.
@@ -117,8 +123,8 @@ def my_test_einstein():
         mvp_0 = [0, 0, p_0, 0]
 
         # Solve ODE system, stopping when p reaches 0.
-        sol = solve_ivp(TOV_eqs, r_span, mvp_0, t_eval=r_eval, method='RK45',
-                                                        events = p_reaches_0)
+        sol = solve_ivp(TOV_eqs, r_span, mvp_0, args = (K_NS,), t_eval=r_eval,
+                                           method="RK45", events = p_reaches_0)
 
         # Record final radius, mass, and baryonic mass
         R_pc = sol.t[-1]
@@ -148,11 +154,11 @@ def my_test_einstein():
 
     plt.scatter(R_pc_vals, M_pc_vals, alpha=0.4, color = "orangered", label = "Datapoints")
     plt.plot(R_fit, M_fit, color = "orangered", label = "Fit Curve")
-    plt.title(rf'$M(\rho_c)$ vs $R(\rho_c)$ plot for NSs (N = {num_points})')
-    plt.xlabel(r'$R(\rho_c)$ (km)')
-    plt.ylabel(r'$M(\rho_c) \quad (M \odot)$')
-    plt.text(14, 1.3, r'Low $\rho_c$', bbox=dict(facecolor="white"))
-    plt.text(10, 1.8, r'High $\rho_c$', bbox=dict(facecolor="white"))
+    plt.title(rf"$M(\rho_c)$ vs $R(\rho_c)$ plot for NSs (N = {num_points})")
+    plt.xlabel(r"$R(\rho_c)$ (km)")
+    plt.ylabel(r"$M(\rho_c) \quad (M \odot)$")
+    plt.text(14, 1.3, r"Low $\rho_c$", bbox=dict(facecolor="white"))
+    plt.text(10, 1.8, r"High $\rho_c$", bbox=dict(facecolor="white"))
     plt.legend()
     plt.show()
 
@@ -165,31 +171,31 @@ def my_test_einstein():
 
     plt.scatter(R_pc_vals, Δ_pc_vals, alpha=0.4, color = "dodgerblue", label = "Datapoints")
     plt.plot(R_fit, B_fit, color = "dodgerblue", label = "Fit Curve")
-    plt.title(rf'$\Delta(\rho_c)$ vs $R(\rho_c)$ plot for NSs (N = {num_points})')
-    plt.xlabel(r'$R(\rho_c)$ (km)')
-    plt.ylabel(r'$\Delta(\rho_c)$')
+    plt.title(rf"$\Delta(\rho_c)$ vs $R(\rho_c)$ plot for NSs (N = {num_points})")
+    plt.xlabel(r"$R(\rho_c)$ (km)")
+    plt.ylabel(r"$\Delta(\rho_c)$")
     plt.legend()
     plt.show()
     print()
 
-    print('Einstein--Parts A and B Done. \n\n\n')
+    print("Einstein--Parts A and B Done. \n\n\n")
 
 
 
     #=========================================================================
     # PART C
     #=========================================================================
-    print('Einstein--Part C Start: \n')
+    print("Einstein--Part C Start: \n")
 
-    #----------------------------------
+    #-----------------------------------
     # Computing M(ρ_c) vs ρ_c curve
-    #----------------------------------
+    #-----------------------------------
 
     # Scale ρ_c values by 1000 just to avoid errors with curve fitting
     ρ_c_vals_scaled = ρ_c_vals * 1e3
 
     # Perform a quintic polynomial curve fit
-    ρ_c_fit = np.linspace(min(ρ_c_vals_scaled), max(ρ_c_vals_scaled), 300)
+    ρ_c_fit = np.linspace(min(ρ_c_vals_scaled), max(ρ_c_vals_scaled), 500)
 
     def quintic_fit(x, a, b, c, d, e, f):
         return a*x**5 + b*x**4 + c*x**3 + d*x**2 + e*x + f
@@ -227,16 +233,20 @@ def my_test_einstein():
     ρ_c_fit_SI_unstable = ρ_c_fit_SI[int(zero_crossing_idx):]
 
 
+    #--------------
+    # Plotting
+    #--------------
+
     # Plot M vs ρc datapoints and stable and unstable fit curves, report maximal Mass
     plt.scatter(ρ_c_vals_SI, M_pc_vals, alpha = 0.3, color = "darkorchid", label = "Datapoints")
     plt.scatter(max_M_ρ_c_SI, max_M, marker= "x", lw=2, label = "Maximal M", color = "gold", zorder = 3)
     plt.plot(ρ_c_fit_SI_stable, M_fit_stable, color = "darkorchid", label = "Stable region")
     plt.plot(ρ_c_fit_SI_unstable, M_fit_unstable, color = "deeppink", label = "Unstable region")
-    plt.title(rf'$M(\rho_c)$ vs $\rho_c$ plot for NSs (N = {num_points})')
-    plt.xlabel(r'$\rho_c$ $\left(\frac{kg}{m^3}\right)$')
-    plt.ylabel(r'$M(\rho_c) \quad (M \odot)$')
+    plt.title(rf"$M(\rho_c)$ vs $\rho_c$ plot for NSs (N = {num_points})")
+    plt.xlabel(r"$\rho_c$ $\left(\frac{kg}{m^3}\right)$")
+    plt.ylabel(r"$M(\rho_c) \quad (M \odot)$")
     plt.text(max_M_ρ_c_SI-5e17, max_M - 0.13,
-    rf'$(\rho_c, M_{{max}}):$ ({float(max_M_ρ_c_SI):.2e}, {float(max_M):.3f})',
+    rf"$(\rho_c, M_{{max}}):$ ({float(max_M_ρ_c_SI):.2e}, {float(max_M):.3f})",
     bbox=dict(facecolor="white"), fontsize = 10)
     plt.legend()
     plt.show()
@@ -244,14 +254,14 @@ def my_test_einstein():
     # Plot dM/dρc
     plt.plot(ρ_c_fit_SI, dM_dρ_c_fit, color = "chocolate")
     plt.scatter(ρ_c_fit_SI[zero_crossing_idx], 0,marker= "x", color = "gold", zorder=3)
-    plt.title(rf'$\frac{{dM}}{{d\rho_c}}$ vs $\rho_c$ plot for NSs (N = {num_points})')
-    plt.xlabel(r'$\rho_c$ $\left(\frac{kg}{m^3}\right)$')
-    plt.ylabel(r'$dM/d\rho_c$')
+    plt.title(rf"$\frac{{dM}}{{d\rho_c}}$ vs $\rho_c$ plot for NSs (N = {num_points})")
+    plt.xlabel(r"$\rho_c$ $\left(\frac{kg}{m^3}\right)$")
+    plt.ylabel(r"$dM/d\rho_c$")
     plt.grid(True)
     plt.show()
     print()
 
-    print('Einstein--Part C. \n\n\n')
+    print("Einstein--Part C Done. \n\n\n")
 
 
 
@@ -259,9 +269,113 @@ def my_test_einstein():
     # PART D
     #=========================================================================
 
+    print("Einstein--Part D Start: \n")
+
+
+    # Set initial parameters
+    num_Ks = 70
+    K_vals = []
+    lowest_K = K_NS - num_Ks//2 # 65
+    highest_K = K_NS + num_Ks//2 + 1 # 136
+
+    max_M_vals = []
+
+    r_span = (0, 15)
+    r_eval = np.linspace(r_span[0], r_span[1], 500)
+
+    num_points = 101
+    ρ_c_vals = np.linspace(9e-4, 9e-3, num_points)
+
+    ρ_c_vals_scaled = ρ_c_vals * 1e3
+    ρ_c_fit = np.linspace(min(ρ_c_vals_scaled), max(ρ_c_vals_scaled), 500)
+
+    # Run loop over different K values
+    for K in range(lowest_K, highest_K, 2):
+
+        M_pc_vals = np.zeros(len(ρ_c_vals))
+
+        # Run loop over differing ρc as before
+        for i in range(len(ρ_c_vals)):
+
+            # Record ρ_c and compute initial pressure
+            ρ_c = ρ_c_vals[i]
+            p_0 = K * (ρ_c**2)
+
+            # Full ODEs initial conditions
+            mvp_0 = [0, 0, p_0, 0]
+
+            # Solve ODE system, stopping when p reaches 0.
+            sol = solve_ivp(TOV_eqs, r_span, mvp_0, args = (K,), t_eval=r_eval,
+                                          method="RK45", events = p_reaches_0)
+
+            # Compute the M(pc) values for the differing ρc
+            M_pc = sol.y[0, -1]
+            M_pc_vals[i] = M_pc
+
+
+        # Perform a fit, and find the maximal mass for this K
+        coeffs, cov = curve_fit(quintic_fit, ρ_c_vals_scaled, M_pc_vals)
+        a, b, c, d, e, f = coeffs
+
+        M_fit = quintic_fit(ρ_c_fit, a, b, c, d, e, f)
+
+        dM_dρ_c_fit = derv_quintic_fit(ρ_c_fit, a, b, c, d, e)
+
+        zero_crossing_idx = np.where((dM_dρ_c_fit[:-1] > 0) & (dM_dρ_c_fit[1:] < 0))[0]
+
+        max_M = M_fit[zero_crossing_idx]
+
+        # Record current maximal mass and K, then repeat for different K
+        max_M_vals.append(max_M)
+        K_vals.append(K)
+
+    max_M_vals =  np.array(max_M_vals)
+    K_vals = np.array(K_vals)
+
+
+    #--------------
+    # Plotting
+    #--------------
+    max_M_observed = 2.14
+
+    max_allowed_idx = np.abs(max_M_vals - max_M_observed).argmin()
+
+    max_allowed_K = K_vals[max_allowed_idx]
+    max_allowed_M = float(max_M_vals[max_allowed_idx])
+
+
+    plt.scatter(max_allowed_K, max_allowed_M, color = "darkred", zorder = 3)
+    plt.plot(K_vals, max_M_vals, color = "red")
+
+    xmin, xmax = plt.gca().get_xlim()
+    ymin, ymax = plt.gca().get_ylim()
+
+    plt.vlines(max_allowed_K, ymin, max_M_observed, color="teal", linestyle ="--", lw = 1)
+    plt.hlines(max_M_observed, xmin, max_allowed_K, color="teal", linestyle ="--", lw = 1)
+    plt.fill_betweenx(y=[ymin, max_M_observed], x1=xmin, x2=max_allowed_K,
+                      color="skyblue", alpha=0.5, label="Allowed K region")
+    plt.text(max_allowed_K-2, max_M_observed-0.15,
+    rf"$(K, M_{{max}}):$ ({max_allowed_K}, {max_allowed_M:.4f})",
+    bbox=dict(facecolor="white"), fontsize = 8)
+    plt.xlabel("K")
+    plt.ylabel(r"$M_{max} \quad (M \odot)$")
+    plt.title(r"$M_{max}$ vs K plot")
+    plt.legend()
+    plt.show()
+    print()
+
+    print("Einstein--Part D Done. \n\n\n")
 
 
 
+    #=========================================================================
+    # END
+    #=========================================================================
     return
 
-my_test_einstein()
+
+
+
+
+if __name__ == "__main__":
+    my_test_einstein()
