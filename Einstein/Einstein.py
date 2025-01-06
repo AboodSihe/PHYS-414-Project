@@ -154,9 +154,9 @@ def my_test_einstein():
 
     plt.scatter(R_pc_vals, M_pc_vals, alpha=0.4, color = "orangered", label = "Datapoints")
     plt.plot(R_fit, M_fit, color = "orangered", label = "Fit Curve")
-    plt.title(rf"$M(\rho_c)$ vs $R(\rho_c)$ plot for NSs (N = {num_points})")
+    plt.title(rf"$M(\rho_c)$ vs $R(\rho_c)$ Plot for NSs (N = {num_points})")
     plt.xlabel(r"$R(\rho_c)$ (km)")
-    plt.ylabel(r"$M(\rho_c) \quad (M \odot)$")
+    plt.ylabel(r"$M(\rho_c) \quad (M_\odot)$")
     plt.text(14, 1.3, r"Low $\rho_c$", bbox=dict(facecolor="white"))
     plt.text(10, 1.8, r"High $\rho_c$", bbox=dict(facecolor="white"))
     plt.legend()
@@ -171,7 +171,7 @@ def my_test_einstein():
 
     plt.scatter(R_pc_vals, Δ_pc_vals, alpha=0.4, color = "dodgerblue", label = "Datapoints")
     plt.plot(R_fit, B_fit, color = "dodgerblue", label = "Fit Curve")
-    plt.title(rf"$\Delta(\rho_c)$ vs $R(\rho_c)$ plot for NSs (N = {num_points})")
+    plt.title(rf"$\Delta(\rho_c)$ vs $R(\rho_c)$ Plot for NSs (N = {num_points})")
     plt.xlabel(r"$R(\rho_c)$ (km)")
     plt.ylabel(r"$\Delta(\rho_c)$")
     plt.legend()
@@ -242,9 +242,9 @@ def my_test_einstein():
     plt.scatter(max_M_ρ_c_SI, max_M, marker= "x", lw=2, label = "Maximal M", color = "gold", zorder = 3)
     plt.plot(ρ_c_fit_SI_stable, M_fit_stable, color = "darkorchid", label = "Stable region")
     plt.plot(ρ_c_fit_SI_unstable, M_fit_unstable, color = "deeppink", label = "Unstable region")
-    plt.title(rf"$M(\rho_c)$ vs $\rho_c$ plot for NSs (N = {num_points})")
+    plt.title(rf"$M(\rho_c)$ vs $\rho_c$ Plot for NSs (N = {num_points})")
     plt.xlabel(r"$\rho_c$ $\left(\frac{kg}{m^3}\right)$")
-    plt.ylabel(r"$M(\rho_c) \quad (M \odot)$")
+    plt.ylabel(r"$M(\rho_c) \quad (M_\odot)$")
     plt.text(max_M_ρ_c_SI-5e17, max_M - 0.13,
     rf"$(\rho_c, M_{{max}}):$ ({float(max_M_ρ_c_SI):.2e}, {float(max_M):.3f})",
     bbox=dict(facecolor="white"), fontsize = 10)
@@ -358,8 +358,8 @@ def my_test_einstein():
     rf"$(K, M_{{max}}):$ ({max_allowed_K}, {max_allowed_M:.4f})",
     bbox=dict(facecolor="white"), fontsize = 8)
     plt.xlabel("K")
-    plt.ylabel(r"$M_{max} \quad (M \odot)$")
-    plt.title(r"$M_{max}$ vs K plot")
+    plt.ylabel(r"$M_{max} \quad (M_\odot)$")
+    plt.title(r"$M_{max}$ vs K Plot")
     plt.legend()
     plt.show()
     print()
