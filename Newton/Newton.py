@@ -1,7 +1,8 @@
 import numpy as np
-from numpy import pi, log
+from numpy import pi, log, sqrt, arcsinh
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
+from scipy.interpolate import CubicSpline
 from scipy.optimize import curve_fit
 from scipy.integrate import solve_ivp
 import csv
@@ -42,6 +43,54 @@ def read_WD_data(filename):
     masses = np.array(masses)
 
     return loggs, masses
+
+
+def general_EOS(ρ, D, q, K):
+    x = (ρ / D)**(1 / q)
+    C = (5/8)* K * D**(5 / q)
+
+    P = C*(x * (2*x**2 - 3) * (sqrt(x**2 + 1)) + 3*arcsinh(x))
+    return P
+
+
+
+def solve_ivp_for_D(r, mpρ_arr, D, K, G):
+    eps = 1e-9
+
+    m, p, ρ  = mpρ_arr
+
+    if r == 0:
+        dpdr = 0
+        dmdr = 0
+        dρdr = 0
+
+
+    else:
+
+        # Case for if p goes below 0
+        if p < 0:
+            p = 0
+
+
+        # Define ODEs
+        dmdr = 4*pi*ρ * r**2
+        dpdr = -(G * m * ρ) / r**2
+        dρdr = ((-3 * G * m * ρ**(1/3)) / (5 * K * r**2 + eps)) * sqrt((ρ/D)**(2/3) + 1)
+
+    return np.array([dmdr, dpdr, dρdr])
+
+
+
+def p_reaches_0(r, mpρ_arr, D, K, G):
+    # PREACHES0 This function and the following lines of code act like a
+    # signal to solve_ivp() to stop integration when p reaches 0. At that point,
+    # we'd have reached the maximal radius of the NS.
+
+    p = mpρ_arr[1]
+    return p
+
+p_reaches_0.terminal = True
+p_reaches_0.direction = 0
 
 
 
@@ -107,7 +156,7 @@ def my_test_newton():
     plt.show()
 
     # Low mass cutoff = 0.4 M☉, adjust mass and radius arrays.
-    low_mass_idx = masses < 0.4
+    low_mass_idx = masses < 0.35
     low_masses = masses[low_mass_idx]
     low_mass_radii = stellar_radii[low_mass_idx]
 
@@ -199,7 +248,7 @@ def my_test_newton():
     R_plt_points = np.linspace(1, 2.7, 100)
     M_plt_points = M_R_eq_full(R_plt_points, K_MSRE)
 
-    plt.plot( R_plt_points, M_plt_points, lw = 2, color = "darkred", label = "Fit")
+    plt.plot( R_plt_points, M_plt_points, lw = 2, color = "lightseagreen", label = "Fit")
     plt.scatter(stellar_radii, masses, lw=0.1, alpha=0.4, color = "teal", label = "True Data")
     plt.title(r"$M-R$ Data of WDs With Low-Mass Data Fitting Line")
     plt.xlabel(r"Radius $(R_\oplus)$")
@@ -250,12 +299,97 @@ def my_test_newton():
     print("Newton--Part C Done. \n\n\n")
 
 
-
     #=========================================================================
     # PART D
     #=========================================================================
+    print("Newton--Part D Start: \n")
+
+    sorted_idx = np.argsort(stellar_radii)
+    stellar_radii = stellar_radii[sorted_idx]
+    masses = masses[sorted_idx]
+    cont_r = np.arange(min(stellar_radii), max(stellar_radii), 0.01)
 
 
+    MR_true_spline = CubicSpline(stellar_radii[::4], masses[::4])
+
+    D_list_MSRE = [0.2, 0.8, 0.3775]
+    colors = ["maroon", "lightcoral", "red"]
+
+
+    for n in  range(len(D_list_MSRE)):
+        D_MSRE = D_list_MSRE[n]
+
+        num_ivps = 10
+        r_span = (0, 7)
+
+        ρ_c_vals = np.array([0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 4, 10, 30])
+
+        R_pc_vals = np.zeros(len(ρ_c_vals))
+        M_pc_vals = np.zeros(len(ρ_c_vals))
+
+        for i in range(len(ρ_c_vals)):
+
+            ρ_c = ρ_c_vals[i]
+            p_c = general_EOS(ρ_c, D_MSRE, q, K_MSRE)
+
+            mpρ0 = [0, p_c, ρ_c]
+
+            sol = solve_ivp(solve_ivp_for_D, r_span, mpρ0,
+            args = (D_MSRE, K_MSRE, G_MSRE), method="RK45", events = p_reaches_0, atol = 1e-10, rtol = 1e-8)
+
+            R_pc = sol.t[-1]
+            M_pc = sol.y[0, -1]
+
+            R_pc_vals[i] = R_pc
+            M_pc_vals[i] = M_pc
+
+
+        sorted_idx = np.argsort(R_pc_vals)
+        R_pc_vals = R_pc_vals[sorted_idx]
+        M_pc_vals = M_pc_vals[sorted_idx]
+        MR_fit_spline = CubicSpline(R_pc_vals, M_pc_vals)
+
+        plt.scatter(R_pc_vals, M_pc_vals, s = 10, color = colors[n], zorder = n+2)
+        plt.plot(cont_r, MR_fit_spline(cont_r), zorder = n+2, color = colors[n], label = rf"$D_{{MSRE}}$ = {D_MSRE} Spline")
+
+
+    plt.plot(cont_r, MR_true_spline(cont_r), color = "teal", lw= 4, zorder = 1, label = "True Data Spline")
+    plt.title("True $M-R$ Curve Against Splines of IVP Solutions\nfor Different Values $D$")
+    plt.xlabel(r"Radius $(R_\oplus)$")
+    plt.ylabel(r"Mass $(M_\odot)$")
+    plt.legend()
+    plt.show()
+
+
+    D_MSRE = D_list_MSRE[-1]
+    D_SI = D_MSRE * (solar_mass / avg_earth_rad**3)
+
+    C_MSRE = (5/8) * K_MSRE * D_MSRE**(5/q)
+    C_SI = (5/8) * K_SI * D_SI**(5/q)
+
+    fit_params_names = ["D (MSRE)", "D (SI)","C (MSRE)", "C (SI)"]
+    fit_params_vals = np.round(np.array([D_MSRE, D_SI, C_MSRE, C_SI]),5)
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+
+    for i, (text, val) in enumerate(zip(fit_params_names, fit_params_vals)):
+        # Draw a rectangle
+        rect = Rectangle((0.1, 0.75 - i * 0.2), 0.8, 0.14, edgecolor="black", facecolor="lightgrey", lw=2)
+        ax.add_patch(rect)
+        # Add text inside the rectangle
+        ax.text(0.5, 0.825 - i * 0.2, f"$\mathbf{{{text}}}$: {val}", fontsize=12, ha="center", va="center")
+    plt.title(r"Numerical Values for $D$ and $C$")
+    ax.axis("off")
+    plt.show()
+    print()
+
+    print("Newton--Part D Done. \n\n\n")
+
+
+
+    #=========================================================================
+    # PART E
+    #=========================================================================
 
 
 
