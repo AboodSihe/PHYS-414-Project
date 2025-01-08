@@ -1,5 +1,5 @@
 import numpy as np
-from numpy import pi, log, sqrt, arcsinh
+from numpy import pi, log, sqrt, arcsinh, exp
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from scipy.interpolate import CubicSpline
@@ -320,7 +320,7 @@ def my_test_newton():
         D_MSRE = D_list_MSRE[n]
 
         num_ivps = 10
-        r_span = (0, 7)
+        r_span = (0, 3)
 
         ρ_c_vals = np.array([0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 4, 10, 30])
 
@@ -390,12 +390,56 @@ def my_test_newton():
     #=========================================================================
     # PART E
     #=========================================================================
+    print("Newton--Part E Start: \n")
+
+    log_vals = np.linspace(log(0.01), log(5000), 50)
+
+    ρ_c_vals = exp(log_vals)
+    D_MSRE = 0.3775
+    r_span = (0, 3)
+
+    R_pc_vals = np.zeros(len(ρ_c_vals))
+    M_pc_vals = np.zeros(len(ρ_c_vals))
+
+    for i in range(len(ρ_c_vals)):
+
+        ρ_c = ρ_c_vals[i]
+        p_c = general_EOS(ρ_c, D_MSRE, q, K_MSRE)
+
+        mpρ0 = [0, p_c, ρ_c]
+
+        sol = solve_ivp(solve_ivp_for_D, r_span, mpρ0,
+        args = (D_MSRE, K_MSRE, G_MSRE), method="RK45", events = p_reaches_0, atol = 1e-10, rtol = 1e-8)
+
+        R_pc = sol.t[-1]
+        M_pc = sol.y[0, -1]
+
+        R_pc_vals[i] = R_pc
+        M_pc_vals[i] = M_pc
+
+
+    sorted_idx = np.argsort(R_pc_vals)
+    R_pc_vals = R_pc_vals[sorted_idx]
+    M_pc_vals = M_pc_vals[sorted_idx]
+    MR_fit_spline = CubicSpline(R_pc_vals, M_pc_vals)
+
+    chandrasekhar_mass = round(float(MR_fit_spline(0)), 4)
+
+    plt.scatter(R_pc_vals, M_pc_vals, s = 3, color = colors[n], zorder = n+2, alpha = 0.5)
+    plt.plot(cont_r, MR_fit_spline(cont_r), zorder = n+2, color = "red")
+    plt.hlines(chandrasekhar_mass, 0, cont_r[-1], color="teal", linestyle ="--", lw = 1.2)
+    plt.text(2, 1.35, fr"$M_{{Ch}} =$ {chandrasekhar_mass}", bbox=dict(facecolor="white"))
+    plt.grid(True)
+    plt.show()
+    print()
+
+    print("Newton--Part E Done. \n\n\n")
 
 
 
-
-
-
+    #=========================================================================
+    # END
+    #=========================================================================
     return
 
 
