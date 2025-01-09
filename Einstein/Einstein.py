@@ -43,7 +43,7 @@ def TOV_eqs(r, mvpb_arr, K):
 
     else:
 
-        # Case for if p goes below 0
+        # Case for if p goes below 0 (Caused by solve_ivp()'s stepping)
         if p < 0:
             p = 0
 
@@ -131,7 +131,7 @@ def my_test_einstein():
         M_pc = sol.y[0, -1]
         B_pc = sol.y[3, -1]
 
-        # Updatea rrays
+        # Update arrays
         R_pc_vals[i] = R_pc
         M_pc_vals[i] = M_pc
         Δ_pc_vals[i] = (B_pc - M_pc) / M_pc
