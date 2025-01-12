@@ -24,7 +24,7 @@ def TOV_eqs(r, mvpb_arr, K):
     # solve_ivp(). It takes care of the edge cases where r = 0 or where p goes
     # below 0 during the integration.
 
-    # v: time dialation factor (nu)
+    # v: time dilation factor (nu)
     # b: baryonic mass
 
     # Initial conditions
@@ -33,7 +33,7 @@ def TOV_eqs(r, mvpb_arr, K):
     p = mvpb_arr[2]
     b = mvpb_arr[3]
 
-    # Case for if r = 0
+    # Case when r = 0
     if r == 0:
         dvdr = 0
         dpdr = 0
@@ -43,7 +43,7 @@ def TOV_eqs(r, mvpb_arr, K):
 
     else:
 
-        # Case for if p goes below 0 (Caused by solve_ivp()'s stepping)
+        # Case when p goes below 0 (Caused by solve_ivp()'s stepping)
         if p < 0:
             p = 0
 
@@ -102,8 +102,8 @@ def my_test_einstein():
     r_span = (0, 15)
     r_eval = np.linspace(r_span[0], r_span[1], 500)
 
-    # In rescaled units, ρ ~ 10^-3, so we check values between 0.9*10^-3 to
-    # 9*10^-3
+    # In rescaled units, ρ ~ 10^-3, so we check values between 0.9x10^-3 to
+    # 9x10^-3
     num_points = 101
     ρ_c_vals = np.linspace(9e-4, 9e-3, num_points)
 
@@ -146,7 +146,7 @@ def my_test_einstein():
     def cubic_fit(x, a, b, c, d):
         return a*x**3 + b*x**2 + c*x + d
 
-    # Plotting MR datapoints and fit curve
+    # Plotting M-R datapoints and fit curve
     coeffsM, cov = curve_fit(cubic_fit, R_pc_vals, M_pc_vals)
     aM, bM, cM, dM = coeffsM
 
@@ -163,7 +163,7 @@ def my_test_einstein():
     plt.show()
 
 
-    # Plotting ΔR datapoints and fit curve (B here for baryonic mass)
+    # Plotting Δ-R datapoints and fit curve (B here for baryonic mass)
     coeffsB, cov = curve_fit(cubic_fit, R_pc_vals, Δ_pc_vals)
     aB, bB, cB, dB = coeffsB
 
@@ -270,6 +270,9 @@ def my_test_einstein():
     #=========================================================================
 
     print("Einstein--Part D Start: \n")
+
+    print()
+    print("This computation may take a while.")
 
 
     # Set initial parameters

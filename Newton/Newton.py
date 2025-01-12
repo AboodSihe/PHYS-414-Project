@@ -25,7 +25,7 @@ solar_mass = 1.988416e30
 
 def read_WD_data(filename): # (Part B)
     #READWDDATA This function reads WD data from a csv file, namely the base-10
-    # logarithm of a WD's gravitional acceleration and its mass, then returns
+    # logarithm of a WD's gravitational acceleration and its mass, then returns
     # those values in an array.
 
     # Initialize lists
@@ -48,7 +48,7 @@ def read_WD_data(filename): # (Part B)
 
 
 def general_EOS(ρ, D, q, K): # (Part D)
-    #GENERAlEOS Takes in a values for ρ, D, q, and K and computes the Pressure
+    #GENERAlEOS Takes in a values for ρ, D, q, and K and computes the pressure
     # using the general EOS and the relation between C, D, and K.
     x = (ρ / D)**(1 / q)
     C = (5/8)* K * D**(5 / q)
@@ -62,8 +62,8 @@ def solve_ivp_for_D(r, mpρ_arr, D, K, G): # (Parts D and E)
     # SOLVEIVPFORD This function receives relevant constants and initial
     # conditions and solves system of DEs relating the mass, pressure, density,
     # and radius of WDs outside the low-mass region where the density and
-    # pressure are related using the general EOS. The integration is
-    # made to stop when the pressure becomes 0.
+    # pressure are related using the general EOS. The integration stops when
+    # the pressure becomes 0.
 
     # Acquire initial conditions
     m, p, ρ  = mpρ_arr
@@ -71,7 +71,7 @@ def solve_ivp_for_D(r, mpρ_arr, D, K, G): # (Parts D and E)
     # Small epsilon to deal with division by 0 errors
     ε = 1e-9
 
-    # Case for if r = 0
+    # Case when r = 0
     if r == 0:
         dpdr = 0
         dmdr = 0
@@ -80,7 +80,7 @@ def solve_ivp_for_D(r, mpρ_arr, D, K, G): # (Parts D and E)
 
     else:
 
-        # Case for if p jumps below 0 (Caused by solve_ivp()'s stepping)
+        # Case when p jumps below 0 (Caused by solve_ivp()'s stepping)
         if p < 0:
             p = 0
 
@@ -177,7 +177,7 @@ def my_test_newton():
     plt.grid(True)
     plt.show()
 
-    # Low mass cutoff = 0.4 M☉, adjust mass and radius arrays.
+    # Low mass cutoff = 0.35 M☉, adjust mass and radius arrays.
     low_mass_idx = masses < 0.35
     low_masses = masses[low_mass_idx]
     low_mass_radii = stellar_radii[low_mass_idx]
@@ -187,7 +187,7 @@ def my_test_newton():
     # Determining q and n*
     #--------------------------
 
-    # Logarithm fit of M(R) equation to find q
+    # Logarithmic fit of M(R) equation to find q
     def M_R_eq_in_log(R, q, a):
         return log(a) + ((15 - 4*q)/ (5 - 2*q))*R
 
@@ -204,7 +204,7 @@ def my_test_newton():
     # Solving Lane-Emden Eq. to determine ξn and θ'(ξn)
     #-------------------------------------------------------
 
-    # Define equation by splitting SODE to two FODEs
+    # Define equation by splitting a 2nd order ODE into two 1st order ODEs
     def lane_emden_eq(ξ, θ):
         v1, v2 = θ
 
@@ -319,6 +319,7 @@ def my_test_newton():
     print("Newton--Part C Done. \n\n\n")
 
 
+
     #=========================================================================
     # PART D
     #=========================================================================
@@ -341,7 +342,7 @@ def my_test_newton():
     for n in  range(len(D_list_MSRE)):
         D_MSRE = D_list_MSRE[n]
 
-        r_span = (0, 3) # Highest radius in data is ~2.5 R🜨
+        r_span = (0, 3) # Highest radius in data is ~2.5 R🜨, so we integrate up to 3 R🜨
 
         # List of ρc that cover range well. (Number = 11)
         ρ_c_vals = np.array([0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 4, 10, 30])
